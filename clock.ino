@@ -1,5 +1,4 @@
 #include <SoftwareSerial.h>
-
 // The actual clock, initialized to 0:00:00
 volatile int hour = 20;
 volatile int minute = 49;
@@ -10,10 +9,15 @@ SoftwareSerial screen(3,4); // pin 4 = TX to screen
 volatile boolean refresh = false;
 volatile boolean buttonPressed = false;
 
+char dateInput[1024];
+int dateCounter;
+boolean transmissionComplete = false;
+
 void setup() {
-  // TODO: set up speaker pin
+  
     Serial.begin(9600);
     screen.begin(9600); // set up serial port for 9600 baud
+    
     delay(500); // wait for display to boot up
     clearScreen();
     initializeClock();
@@ -48,13 +52,35 @@ void initializeClock() {
     sei();    
 }
 
+void serialEvent() {
+  while (Serial.available() && dateCounter < 1024) {
+    // get the new byte:
+    char inChar = (char)Serial.read();
+    // add it to the inputString:
+    dateInput[dateCounter++] += inChar;
+    // if the incoming character is a newline, set a flag
+    // so the main loop can do something about it:
+    if (inChar == '\n') {
+      transmissionComplete = true;
+    }
+  }
+}
+
 
 void loop() {
-  tone(A0, 440, 5); 
   if (refresh) {
    drawTime();
    refresh = false;
   }
+  
+  serialEvent();
+  if (transmissionComplete) {
+    
+    
+    dateCounter = 0;
+    transmissionComplete = false;
+  }
+  
 }
 
 ISR(TIMER1_COMPA_vect)
