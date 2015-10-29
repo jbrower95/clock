@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 // The actual clock, initialized to 0:00:00
-volatile int hour = 20;
-volatile int minute = 49;
+volatile int hour = 22;
+volatile int minute = 38;
 volatile int second = 0;
 
 SoftwareSerial screen(3,4); // pin 4 = TX to screen
