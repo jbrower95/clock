@@ -4,6 +4,9 @@
 #include <avr/io.h>
 #include <stdint.h>
 
+#include "cuckoo.h"
+#include "Interrupts.h"
+
 #define SAMPLE_RATE 8000
 
 
@@ -42,6 +45,9 @@ void setup() {
     digitalWrite(7, HIGH);
     
     pinMode(A0, OUTPUT);
+
+    pinMode(11, OUTPUT);
+  	startPlayback(cuckoo_data, sizeof(cuckoo_data));
 }
 
 void initializeClock() {
@@ -98,11 +104,13 @@ void loop() {
   
 }
 
+/*
 ISR(TIMER1_COMPA_vect)
 {
     tick();
     refresh = true;
 }
+*/
 
 /* Clears the attached LCD display. */
 void clearScreen() {
