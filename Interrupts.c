@@ -29,6 +29,7 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
+//#include <SoftwareSerial.h>
 
 #define SAMPLE_RATE 8000
 
@@ -70,8 +71,78 @@ int sounddata_length=0;
 volatile uint16_t sample;
 byte lastSample;
 
+int counter = 0;
+int maxCount = 8;
+
+volatile int hour = 22;
+volatile int minute = 38;
+volatile int second = 0;
+
+//SoftwareSerial screen(2,4); // pin 4 = TX to screen
+
+volatile boolean refresh = false;
+char dateInput[1024];
+int dateCounter;
+boolean transmissionComplete = false;
+
+
+/* Ticks the clock. This advances the clock by 1s. */
+void tick() {
+ second++;
+ 
+ if (second >= 60) {
+  minute++;
+  second = 0; 
+ }
+ 
+ if (minute >= 60) {
+  hour++;
+  minute = 0; 
+ }
+ 
+ if (hour >= 24) {
+  hour = 0; 
+ }
+}
+
+/* Draws the time to the attached LCD display. */
+void drawTime() {
+//  clearScreen();
+  char timeBuffer[30];
+  char *locale;
+  if (hour >= 12) {
+   locale = "PM"; 
+  } else {
+   locale = "AM"; 
+  }
+  sprintf(timeBuffer, "%02d:%02d:%02d %s", hour % 12, minute, second, locale);
+  Serial.println(timeBuffer);
+}
+
+void serialEvent() {
+  while (Serial.available() && dateCounter < 1024) {
+    // get the new byte:
+    char inChar = (char)Serial.read();
+    // add it to the inputString:
+    dateInput[dateCounter++] += inChar;
+    // if the incoming character is a newline, set a flag
+    // so the main loop can do something about it:
+    if (inChar == '\n') {
+      transmissionComplete = true;
+    }
+  }
+}
+
+
 // This is called at 8000 Hz to load the next sample.
 ISR(TIMER1_COMPA_vect) {
+  if (counter >= maxCount) {
+    counter = 0;
+  } else {
+    counter++;
+    tick();
+  }
+  
   if (sample >= sounddata_length) {
     if (sample == sounddata_length + lastSample) {
       stopPlayback();
