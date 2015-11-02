@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "cuckoo.h"
+#include "ding_dong.h"
 #include "Interrupts.h"
 
 #define SAMPLE_RATE 8000
@@ -47,7 +48,8 @@ void setup() {
     pinMode(A0, OUTPUT);
 
     pinMode(11, OUTPUT);
-  	startPlayback(cuckoo_data, sizeof(cuckoo_data));
+  	//startPlayback(cuckoo_data, sizeof(cuckoo_data));
+    startPlayback(ding_dong_data, sizeof(ding_dong_data));
 }
 
 void initializeClock() {
@@ -57,9 +59,7 @@ void initializeClock() {
     TCCR0A = 0;
     TCCR0B = 0;
     
-    // set up prescalar
-   
-    
+    // set up prescalar 
     TCCR1A = 0;     // set entire TCCR1A register to 0
     TCCR1B = 0;     // same for TCCR1B
     // set compare match register to desired timer count:
@@ -96,21 +96,13 @@ void loop() {
    refresh = false;
   }
   
-  serialEvent();
-  if (transmissionComplete) {
-    dateCounter = 0;
-    transmissionComplete = false;
-  }
+  // serialEvent();
+  // if (transmissionComplete) {
+  //   dateCounter = 0;
+  //   transmissionComplete = false;
+  // }
   
 }
-
-/*
-ISR(TIMER1_COMPA_vect)
-{
-    tick();
-    refresh = true;
-}
-*/
 
 /* Clears the attached LCD display. */
 void clearScreen() {
@@ -153,6 +145,7 @@ void tick() {
  if (hour >= 24) {
   hour = 0; 
  }
+ refresh = true;
 }
 
               
