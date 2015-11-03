@@ -117,13 +117,11 @@ bool parseDate(char *input, int length) {
       // disperse accumulator
       volatile int *current = parts[part++];
 
-      if (accumulator > maxes[part-1] || part > num_parts) {
+      if (part > 3 || (part == 0 && accumulator > 23) || (part != 0 && accumulator > 59)) {
         Serial.println("Returning with FALSE");
         Serial.println(part);
         Serial.print("Accumulator: ");
         Serial.println(accumulator);
-        Serial.print("maxes[part-1]: ");
-        Serial.println(maxes[part-1]);
         return false;
       }
 
