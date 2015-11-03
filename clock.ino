@@ -72,8 +72,6 @@ void setup() {
         transmissionComplete = false;
       }
     }
-
-  	//startPlayback(cuckoo_data, sizeof(cuckoo_data));
 }
 
 void serialEvent() {
@@ -142,8 +140,6 @@ bool parseDate(char *input, int length) {
     }
   }
 
-
-
   return (assigned == 3);
 }
 
@@ -167,7 +163,7 @@ void drawTime() {
 }
 
 /* Ticks the clock. This advances the clock by 1s. */
-void tick() {
+int tick(int playing) {
  second++;
  
  minute += second / 60;
@@ -178,7 +174,17 @@ void tick() {
 
  hour = hour % 24;
 
+  // Can be optimized, but need to be careful that we only set it once for each of these
+  // and don't reset it to 0 while the current melody still needs to play
+ if (minute == 30 && second == 0) {
+  playing = 1;
+ }
+ if (minute == 0 && second == 0) {
+  playing = 2;
+ }
+
  refresh = true;
+ return playing;
 }
 
 int getSeconds() {

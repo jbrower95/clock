@@ -69,12 +69,12 @@ byte lastSample;
 int counter = 0;
 int maxCount = 7999;
 
-volatile bool playing = false;
+volatile int playing = 0; // 0 = none, 1 = ding_dong, 2 = cuckoo
 
 // This is called at 8000 Hz to load the next sample.
 ISR(TIMER1_COMPA_vect) {
   if (counter >= maxCount) {
-    tick();
+    playing = tick(playing);
     counter = 0;
   } else {
     counter++;
@@ -152,11 +152,9 @@ void startPlayback(unsigned char const *data, int length) {
   lastSample = pgm_read_byte(&sounddata_data[sounddata_length-1]);
   sample = 0;
   sei();
-
-  playing = true;
 }
 
 inline void stopPlayback() {
   sample = -1;
-  playing = false;
+  playing = 0;
 }
