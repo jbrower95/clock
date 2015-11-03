@@ -7,14 +7,15 @@
 #include "cuckoo.h"
 #include "ding_dong.h"
 #include "Interrupts.h"
+#include <string.h>
 
 #define SAMPLE_RATE 8000
 
 
 // The actual clock, initialized to 0:00:00
-volatile int hour = 0;
-volatile int minute = 0;
-volatile int second = 0;
+volatile int hour = 23;
+volatile int minute = 59;
+volatile int second = 55;
 
 SoftwareSerial screen(2,4); // pin 4 = TX to screen
 
@@ -22,8 +23,11 @@ volatile boolean refresh = false;
 
 char dateInput[1024];
 int dateCounter;
-boolean transmissionComplete = false;
 
+bool transmissionComplete = false;
+
+const char *locale_AM = "AM";
+const char *locale_PM = "PM";
 
 void setup() {
   
@@ -32,7 +36,6 @@ void setup() {
     
     delay(500); // wait for display to boot up
     clearScreen();
-    initializeClock();
     
     pinMode(5, INPUT_PULLUP);
     pinMode(7, OUTPUT);
@@ -47,31 +50,30 @@ void setup() {
     pinMode(A0, OUTPUT);
 
     pinMode(11, OUTPUT);
-  	//startPlayback(cuckoo_data, sizeof(cuckoo_data));
-    startPlayback(ding_dong_data, sizeof(ding_dong_data));
-}
+    screen.write("Waiting for time...");
+    while (true) {
+      serialEvent();
+      if (transmissionComplete) {
+        clearScreen();
+        dateInput[dateCounter] = 0;
+        if (parseDate(dateInput, dateCounter)) {
+          Serial.print("Hour: ");
+          Serial.println(hour);
+          Serial.print("Minute: ");
+          Serial.println(minute);
+          Serial.print("Second: ");
+          Serial.println(second);
+          startPlayback(ding_dong_data, sizeof(ding_dong_data));
+          return;
+        } else {
+          clearScreen();
+          screen.write("Whoops! Incorrect format.");
+        }
+        transmissionComplete = false;
+      }
+    }
 
-void initializeClock() {
-    cli();          // disable global interrupts
-   
-    // set up 8 khz clock
-    TCCR0A = 0;
-    TCCR0B = 0;
-    
-    // set up prescalar 
-    TCCR1A = 0;     // set entire TCCR1A register to 0
-    TCCR1B = 0;     // same for TCCR1B
-    // set compare match register to desired timer count:
-    OCR1A = 15624;
-    // turn on CTC mode:
-    TCCR1B |= (1 << WGM12);
-    // Set CS10 and CS12 bits for 1024 prescaler:
-    TCCR1B |= (1 << CS10);
-    TCCR1B |= (1 << CS12);
-    // enable timer compare interrupt:
-    TIMSK1 |= (1 << OCIE1A);
-    // enable global interrupts:
-    sei();    
+  	//startPlayback(cuckoo_data, sizeof(cuckoo_data));
 }
 
 void serialEvent() {
@@ -94,13 +96,57 @@ void loop() {
    drawTime();
    refresh = false;
   }
+}
+
+bool parseDate(char *input, int length) {
+  if (input == NULL || length == 0) {
+     return false;
+  }
+
+  // null terminate the input string, just in case.
+  input[length] = 0;
+
+  volatile int *parts[] = {&hour, &minute, &second};
+
+  int accumulator = 0;
+  int part = 0;
+  int assigned = 0;
   
-  // serialEvent();
-  // if (transmissionComplete) {
-  //   dateCounter = 0;
-  //   transmissionComplete = false;
-  // }
-  
+  for (int i = 0; i < length; i++) { 
+    if (input[i] == ':' || input[i] == '\n') {
+      // disperse accumulator
+      volatile int *current = parts[part++];
+
+      if (accumulator > maxes[part-1] || part > num_parts) {
+        Serial.println("Returning with FALSE");
+        Serial.println(part);
+        Serial.print("Accumulator: ");
+        Serial.println(accumulator);
+        Serial.print("maxes[part-1]: ");
+        Serial.println(maxes[part-1]);
+        return false;
+      }
+
+      *current = accumulator;
+      assigned++;
+      accumulator = 0;
+    } else {
+      // check if it's a number
+      int num = (int)input[i];
+      Serial.print("Is you a number? ");
+      Serial.println(isdigit(num));
+      if (!isdigit(num)) {
+        return false;
+      }
+
+      accumulator = accumulator * 10;
+      accumulator += num - 48;
+    }
+  }
+
+
+
+  return (assigned == 3);
 }
 
 /* Clears the attached LCD display. */
@@ -117,12 +163,7 @@ void clearScreen() {
 void drawTime() {
   clearScreen();
   char timeBuffer[30];
-  char *locale;
-  if (hour >= 12) {
-   locale = "PM"; 
-  } else {
-   locale = "AM"; 
-  }
+  const char *locale = (hour >= 12) ? locale_PM : locale_AM;
   sprintf(timeBuffer, "%02d:%02d:%02d %s", hour % 12, minute, second, locale);
   screen.write(timeBuffer);
 }
@@ -131,19 +172,13 @@ void drawTime() {
 void tick() {
  second++;
  
- if (second >= 60) {
-  minute++;
-  second = 0; 
- }
- 
- if (minute >= 60) {
-  hour++;
-  minute = 0; 
- }
- 
- if (hour >= 24) {
-  hour = 0; 
- }
+ minute += second / 60;
+ second = second % 60;
+
+ hour += minute / 60;
+ minute = minute % 60;
+
+ hour = hour % 24;
 
  refresh = true;
 }
@@ -153,12 +188,3 @@ int getSeconds() {
 }
 
               
-// Plays the ding-dong sound every halfhour
-void playDingDong() {
-  // TODO: play ding dong
-}
-
-void playCuckoo() {
-  // TODO: play cuckoo
-}
-
