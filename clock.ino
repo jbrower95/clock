@@ -12,14 +12,13 @@
 
 
 // The actual clock, initialized to 0:00:00
-volatile int hour = 22;
-volatile int minute = 38;
+volatile int hour = 0;
+volatile int minute = 0;
 volatile int second = 0;
 
 SoftwareSerial screen(2,4); // pin 4 = TX to screen
 
 volatile boolean refresh = false;
-volatile boolean buttonPressed = false;
 
 char dateInput[1024];
 int dateCounter;
@@ -145,7 +144,12 @@ void tick() {
  if (hour >= 24) {
   hour = 0; 
  }
+
  refresh = true;
+}
+
+int getSeconds() {
+  return second;
 }
 
               
