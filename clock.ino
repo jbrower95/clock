@@ -17,6 +17,7 @@ volatile int hour = 23;
 volatile int minute = 59;
 volatile int second = 55;
 
+
 SoftwareSerial screen(2,4); // pin 4 = TX to screen
 
 volatile boolean refresh = false;
@@ -131,8 +132,6 @@ bool parseDate(char *input, int length) {
     } else {
       // check if it's a number
       int num = (int)input[i];
-      Serial.print("Is you a number? ");
-      Serial.println(isdigit(num));
       if (!isdigit(num)) {
         return false;
       }
@@ -162,7 +161,8 @@ void drawTime() {
   clearScreen();
   char timeBuffer[30];
   const char *locale = (hour >= 12) ? locale_PM : locale_AM;
-  sprintf(timeBuffer, "%02d:%02d:%02d %s", hour % 12, minute, second, locale);
+  int hour_display = (hour == 12 ? 12 : hour % 12);
+  sprintf(timeBuffer, "%02d:%02d:%02d %s", hour_display, minute, second, locale);
   screen.write(timeBuffer);
 }
 
@@ -179,6 +179,11 @@ void tick() {
  hour = hour % 24;
 
  refresh = true;
+
+ if (second == 0 && minute == 0) {
+  // play 'cuckoo' hour times
+  playCuckoo = hour; 
+ }
 }
 
 int getSeconds() {

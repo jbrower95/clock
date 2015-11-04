@@ -80,19 +80,16 @@ ISR(TIMER1_COMPA_vect) {
     counter++;
   }
 
+  if (playCuckoo) {
+        playing = true;
+  }
+
   if (!playing) {
     return;
   }
   
   if (sample >= sounddata_length) {
-    //if (sample == sounddata_length + lastSample) {
-      // stop playback 
       stopPlayback();
-    // }
-    // else {
-    //   // Ramp down to zero to reduce the click at the end of playback.
-    //   OCR2A = sounddata_length + lastSample - sample;
-    // }
   }
   else {
     OCR2A = pgm_read_byte(&sounddata_data[sample]);
@@ -102,6 +99,7 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 void startPlayback(unsigned char const *data, int length) {
+
   sounddata_data = data;
   sounddata_length = length;
 
@@ -130,7 +128,6 @@ void startPlayback(unsigned char const *data, int length) {
   
   
   // Set up Timer 1 to send a sample every interrupt.
-  
   cli();
   
   // Set CTC mode (Clear Timer on Compare Match) (p.133)
@@ -152,11 +149,10 @@ void startPlayback(unsigned char const *data, int length) {
   lastSample = pgm_read_byte(&sounddata_data[sounddata_length-1]);
   sample = 0;
   sei();
-
-  playing = true;
 }
 
 inline void stopPlayback() {
   sample = -1;
   playing = false;
+  playCuckoo--;
 }
