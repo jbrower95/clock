@@ -73,8 +73,6 @@ void setup() {
         transmissionComplete = false;
       }
     }
-
-  	//startPlayback(cuckoo_data, sizeof(cuckoo_data));
 }
 
 void serialEvent() {
@@ -141,8 +139,6 @@ bool parseDate(char *input, int length) {
     }
   }
 
-
-
   return (assigned == 3);
 }
 
@@ -182,12 +178,14 @@ void tick() {
 
  if (second == 0 && minute == 0) {
   // play 'cuckoo' hour times
-  playCuckoo = hour; 
+  setCuckooPlaying();
+  playCounter = hour; 
+ } else if (second == 0 && minute == 30) {
+  // ding dong
+  setDingDongPlaying();
+  playCounter = 1;
  }
-}
 
-int getSeconds() {
-  return second;
 }
 
               

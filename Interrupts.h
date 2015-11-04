@@ -51,7 +51,9 @@
 
 #include <avr/pgmspace.h>
 #ifndef INTERRUPT_H
-	volatile int playCuckoo;
+	volatile int playCounter;
+	void setDingDongPlaying();
+	void setCuckooPlaying();
 	void startPlayback(unsigned char const *data, int length);
 	void stopPlayback();
 	#define INTERRUPT_H

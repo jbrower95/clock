@@ -61,7 +61,7 @@
  */
 
 int speakerPin = 11;
-unsigned char const *sounddata_data=0;
+unsigned const char *sounddata_data=0;
 int sounddata_length=0;
 volatile uint16_t sample;
 byte lastSample;
@@ -69,7 +69,6 @@ byte lastSample;
 int counter = 0;
 int maxCount = 7999;
 
-volatile bool playing = false;
 
 // This is called at 8000 Hz to load the next sample.
 ISR(TIMER1_COMPA_vect) {
@@ -80,11 +79,7 @@ ISR(TIMER1_COMPA_vect) {
     counter++;
   }
 
-  if (playCuckoo) {
-        playing = true;
-  }
-
-  if (!playing) {
+  if (!playCounter) {
     return;
   }
   
@@ -94,9 +89,20 @@ ISR(TIMER1_COMPA_vect) {
   else {
     OCR2A = pgm_read_byte(&sounddata_data[sample]);
   }
-  
+
   ++sample;
 }
+
+void setCuckooPlaying() {
+  sounddata_length = cuckoo_data_length;
+  sounddata_data = cuckoo_data;
+}
+
+void setDingDongPlaying() {
+  sounddata_length = ding_dong_length;
+  sounddata_data = ding_dong_data;
+}
+
 
 void startPlayback(unsigned char const *data, int length) {
 
@@ -153,6 +159,5 @@ void startPlayback(unsigned char const *data, int length) {
 
 inline void stopPlayback() {
   sample = -1;
-  playing = false;
-  playCuckoo--;
+  playCounter--;
 }
