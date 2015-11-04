@@ -109,10 +109,6 @@ bool parseDate(char *input, size_t length) {
       volatile int *current = parts[part++];
 
       if (part > 3 || (part == 0 && accumulator > 23) || (part != 0 && accumulator > 59)) {
-        Serial.println("Returning with FALSE");
-        Serial.println(part);
-        Serial.print("Accumulator: ");
-        Serial.println(accumulator);
         return false;
       }
 

@@ -92,7 +92,6 @@ void initializeTimers() {
   // Set initial pulse width to the first sample.
   OCR2A = pgm_read_byte(&sounddata_data[0]);
   
-  
   // Set up Timer 1 to send a sample every interrupt.
   cli();
   
