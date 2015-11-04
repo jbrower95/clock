@@ -1,68 +1,21 @@
 /*
- * speaker_pcm
- *
- * Plays 8-bit PCM audio on pin 11 using pulse-width modulation (PWM).
- * For Arduino with Atmega168 at 16 MHz.
- *
- * Uses two timers. The first changes the sample value 8000 times a second.
- * The second holds pin 11 high for 0-255 ticks out of a 256-tick cycle,
- * depending on sample value. The second timer repeats 62500 times per second
- * (16000000 / 256), much faster than the playback rate (8000 Hz), so
- * it almost sounds halfway decent, just really quiet on a PC speaker.
- *
- * Takes over Timer 1 (16-bit) for the 8000 Hz timer. This breaks PWM
- * (analogWrite()) for Arduino pins 9 and 10. Takes Timer 2 (8-bit)
- * for the pulse width modulation, breaking PWM for pins 11 & 3.
- *
- * References:
- *     http://www.uchobby.com/index.php/2007/11/11/arduino-sound-part-1/
- *     http://www.atmel.com/dyn/resources/prod_documents/doc2542.pdf
- *     http://www.evilmadscientist.com/article.php/avrdac
- *     http://gonium.net/md/2006/12/27/i-will-think-before-i-code/
- *     http://fly.cc.fer.hr/GDM/articles/sndmus/speaker2.html
- *     http://www.gamedev.net/reference/articles/article442.asp
- *
- * Michael Smith <michael@hurts.ca>
+ * Uses PWM to play 8-bit (unsigned) PCM audio (DingDong and Cuckoo) while as needed counting seconds.
+ * Uses two timers to do this: Timer1 samples/counts to a second at 8Hz, Timer2 sends HIGH to the speaker pin 
+ * at the frequency for the sampled note (using PWM).
  */
 
 #include <stdint.h>
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
-//#include <SoftwareSerial.h>
-
-#define SAMPLE_RATE 8000
-
 #include "Interrupts.h"
 #include "clock.h"
 
-/*
- * The audio data needs to be unsigned, 8-bit, 8000 Hz, and small enough
- * to fit in flash. 10000-13000 samples is about the limit.
- *
- * sounddata.h should look like this:
- *     const int sounddata_length=10000;
- *     const unsigned char sounddata_data[] PROGMEM = { ..... };
- *
- * You can use wav2c from GBA CSS:
- *     http://thieumsweb.free.fr/english/gbacss.html
- * Then add "PROGMEM" in the right place. I hacked it up to dump the samples
- * as unsigned rather than signed, but it shouldn't matter.
- *
- * http://musicthing.blogspot.com/2005/05/tiny-music-makers-pt-4-mac-startup.html
- * mplayer -ao pcm macstartup.mp3
- * sox audiodump.wav -v 1.32 -c 1 -r 8000 -u -1 macstartup-8000.wav
- * sox macstartup-8000.wav macstartup-cut.wav trim 0 10000s
- * wav2c macstartup-cut.wav sounddata.h sounddata
- *
- * (starfox) nb. under sox 12.18 (distributed in CentOS 5), i needed to run
- * the following command to convert my wav file to the appropriate format:
- * sox audiodump.wav -c 1 -r 8000 -u -b macstartup-8000.wav
- */
+#define SAMPLE_RATE 8000
 
 int speakerPin = 11;
-unsigned const char *sounddata_data=0;
-int sounddata_length=0;
+unsigned const char *melody_data=0; // The data of the melody to be played
+int melody_data_length=0; // The length of the melody data
 volatile uint16_t sample;
 byte lastSample;
 
@@ -70,8 +23,11 @@ int counter = 0;
 int maxCount = 7999;
 
 
-// This is called at 8000 Hz to load the next sample.
+/* Counts to a second; if a second has been reached, call tick() to increment the clock.
+ * If a sound should be playing, sample the appropriate sound.
+ */
 ISR(TIMER1_COMPA_vect) {
+  // Check for second
   if (counter >= maxCount) {
     tick();
     counter = 0;
@@ -79,36 +35,40 @@ ISR(TIMER1_COMPA_vect) {
     counter++;
   }
 
+  // If nothing to be played, return here
   if (!playCounter) {
     return;
   }
-  
-  if (sample >= sounddata_length) {
-      stopPlayback();
+
+  // If no more to sample, decrement playback
+  if (sample >= melody_data_length) {
+      decrementPlayback();
   }
   else {
-    OCR2A = pgm_read_byte(&sounddata_data[sample]);
+    OCR2A = pgm_read_byte(&melody_data[sample]);
   }
 
-  ++sample;
+  sample++;
 }
 
+/*
+ * Sets the melody to "cuckoo"
+ */
 void setCuckooPlaying() {
-  sounddata_length = cuckoo_data_length;
-  sounddata_data = cuckoo_data;
+  melody_data_length = cuckoo_data_length;
+  melody_data = cuckoo_data;
 }
 
+/*
+ * Sets the melody to "ding_dong"
+ */
 void setDingDongPlaying() {
-  sounddata_length = ding_dong_length;
-  sounddata_data = ding_dong_data;
+  melody_data_length = ding_dong_length;
+  melody_data = ding_dong_data;
 }
 
 
-void startPlayback(unsigned char const *data, int length) {
-
-  sounddata_data = data;
-  sounddata_length = length;
-
+void initializeTimers() {
   pinMode(speakerPin, OUTPUT);
   
   // Set up Timer 2 to do pulse width modulation on the speaker
@@ -157,7 +117,7 @@ void startPlayback(unsigned char const *data, int length) {
   sei();
 }
 
-inline void stopPlayback() {
+inline void decrementPlayback() {
   sample = -1;
   playCounter--;
 }
