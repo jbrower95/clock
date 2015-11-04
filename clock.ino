@@ -23,6 +23,7 @@ SoftwareSerial screen(2,4); // pin 4 = TX to screen
 volatile boolean refresh = false;
 
 /* Used to communicate over serial with the computer. */
+const char __SEPARATOR = ':';
 char dateInput[1024];
 size_t dateCounter;
 bool transmissionComplete = false; // used to communicate over serial
@@ -31,7 +32,6 @@ const char *locale_AM = "AM";
 const char *locale_PM = "PM";
 
 void setup() {
-  
     Serial.begin(9600); // set up debug
     screen.begin(9600); // set up screen @ 9600 baud
     
@@ -65,14 +65,14 @@ void loop() {
   }
 }
 
+/* Reads from the Serial connection.
+ *
+ * Stores the resulting string in dateInput[].
+ */
 void serialEvent() {
   while (Serial.available() && dateCounter < 1024) {
-    // get the new byte:
     char inChar = (char)Serial.read();
-    // add it to the inputString:
     dateInput[dateCounter++] += inChar;
-    // if the incoming character is a newline, set a flag
-    // so the main loop can do something about it:
     if (inChar == '\n') {
       transmissionComplete = true;
     }
@@ -104,7 +104,7 @@ bool parseDate(char *input, size_t length) {
   int assigned = 0;
   
   for (int i = 0; i < length; i++) { 
-    if (input[i] == ':' || input[i] == '\n') {
+    if (input[i] == __SEPARATOR || input[i] == '\n') {
       // disperse accumulator
       volatile int *current = parts[part++];
 
