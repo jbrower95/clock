@@ -67,7 +67,10 @@ void setDingDongPlaying() {
   melody_data = ding_dong_data;
 }
 
-
+/*
+ * Initializes Timer2 to do PWM on speaker pin and
+ * Timer1 to CTC mode to sample at 8kHz.
+ */
 void initializeTimers() {
   pinMode(speakerPin, OUTPUT);
   
@@ -90,7 +93,7 @@ void initializeTimers() {
   TCCR2B = (TCCR2B & ~(_BV(CS12) | _BV(CS11))) | _BV(CS10);
   
   // Set initial pulse width to the first sample.
-  OCR2A = pgm_read_byte(&sounddata_data[0]);
+  OCR2A = pgm_read_byte(&melody_data[0]);
   
   
   // Set up Timer 1 to send a sample every interrupt.
@@ -117,6 +120,10 @@ void initializeTimers() {
   sei();
 }
 
+/*
+ * Resets the sample index and decrements the number of times
+ * the melody needs to be played.
+ */
 inline void decrementPlayback() {
   sample = -1;
   playCounter--;
