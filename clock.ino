@@ -13,59 +13,42 @@
 
 
 // The actual clock, initialized to 0:00:00
+// These are military values for the time stored.
 volatile int hour = 23;
 volatile int minute = 59;
 volatile int second = 55;
-
 
 SoftwareSerial screen(2,4); // pin 4 = TX to screen
 
 volatile boolean refresh = false;
 
+/* Used to communicate over serial with the computer. */
 char dateInput[1024];
-int dateCounter;
-
-bool transmissionComplete = false;
+size_t dateCounter;
+bool transmissionComplete = false; // used to communicate over serial
 
 const char *locale_AM = "AM";
 const char *locale_PM = "PM";
 
 void setup() {
   
-    Serial.begin(9600);
-    screen.begin(9600); // set up serial port for 9600 baud
+    Serial.begin(9600); // set up debug
+    screen.begin(9600); // set up screen @ 9600 baud
     
     delay(500); // wait for display to boot up
     clearScreen();
     
-    pinMode(5, INPUT_PULLUP);
-    pinMode(7, OUTPUT);
-    pinMode(3, OUTPUT);
-    
-    pinMode(8, OUTPUT);
-    digitalWrite(8, HIGH);
-    
-    digitalWrite(3, LOW);
-    digitalWrite(7, HIGH);
-    
-    pinMode(A0, OUTPUT);
-
-    pinMode(11, OUTPUT);
     screen.write("Waiting for time...");
+    
     while (true) {
       serialEvent();
       if (transmissionComplete) {
         clearScreen();
         dateInput[dateCounter] = 0;
         if (parseDate(dateInput, dateCounter)) {
-          Serial.print("Hour: ");
-          Serial.println(hour);
-          Serial.print("Minute: ");
-          Serial.println(minute);
-          Serial.print("Second: ");
-          Serial.println(second);
+          drawTime();
           startPlayback(ding_dong_data, sizeof(ding_dong_data));
-          return;
+          break;
         } else {
           clearScreen();
           screen.write("Whoops! Incorrect format.");
@@ -73,6 +56,13 @@ void setup() {
         transmissionComplete = false;
       }
     }
+}
+
+void loop() {
+  if (refresh) {
+   drawTime();
+   refresh = false;
+  }
 }
 
 void serialEvent() {
@@ -90,14 +80,16 @@ void serialEvent() {
 }
 
 
-void loop() {
-  if (refresh) {
-   drawTime();
-   refresh = false;
-  }
-}
 
-bool parseDate(char *input, int length) {
+
+/* Parses an inputted date string.
+ * 
+ * input: The string to parse. 
+ *    e.g "12:15:15"
+ * length: The size of the inputted string.
+ *    e.g: 9
+ */
+bool parseDate(char *input, size_t length) {
   if (input == NULL || length == 0) {
      return false;
   }
@@ -185,7 +177,6 @@ void tick() {
   setDingDongPlaying();
   playCounter = 1;
  }
-
 }
 
               
