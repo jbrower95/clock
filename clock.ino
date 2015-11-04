@@ -22,25 +22,22 @@ SoftwareSerial screen(2,4); // pin 4 = TX to screen
 
 volatile boolean refresh = false;
 
+/* Used to communicate over serial with the computer. */
 char dateInput[1024];
 size_t dateCounter;
-
-bool transmissionComplete = false;
+bool transmissionComplete = false; // used to communicate over serial
 
 const char *locale_AM = "AM";
 const char *locale_PM = "PM";
 
 void setup() {
   
-    Serial.begin(9600);
-    screen.begin(9600); // set up serial port for 9600 baud
+    Serial.begin(9600); // set up debug
+    screen.begin(9600); // set up screen @ 9600 baud
     
     delay(500); // wait for display to boot up
     clearScreen();
     
-    pinMode(A0, OUTPUT);
-    pinMode(11, OUTPUT);
-
     screen.write("Waiting for time...");
     
     while (true) {
@@ -61,6 +58,13 @@ void setup() {
     }
 }
 
+void loop() {
+  if (refresh) {
+   drawTime();
+   refresh = false;
+  }
+}
+
 void serialEvent() {
   while (Serial.available() && dateCounter < 1024) {
     // get the new byte:
@@ -76,12 +80,7 @@ void serialEvent() {
 }
 
 
-void loop() {
-  if (refresh) {
-   drawTime();
-   refresh = false;
-  }
-}
+
 
 /* Parses an inputted date string.
  * 
