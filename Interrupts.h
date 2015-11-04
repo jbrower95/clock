@@ -54,7 +54,6 @@
 	volatile int playCounter;
 	void setDingDongPlaying();
 	void setCuckooPlaying();
-	void startPlayback(unsigned char const *data, int length);
-	void stopPlayback();
+	void initializeTimers();
 	#define INTERRUPT_H
 #endif

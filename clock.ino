@@ -47,7 +47,7 @@ void setup() {
         dateInput[dateCounter] = 0;
         if (parseDate(dateInput, dateCounter)) {
           drawTime();
-          startPlayback(ding_dong_data, sizeof(ding_dong_data));
+          initializeTimers();
           break;
         } else {
           clearScreen();
