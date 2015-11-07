@@ -20,7 +20,7 @@ volatile uint16_t sample;
 byte lastSample;
 
 int counter = 0;
-int maxCount = 7999;
+int maxCount = 7650;
 
 
 /* Counts to a second; if a second has been reached, call tick() to increment the clock.
@@ -114,7 +114,7 @@ void initializeTimers() {
   // Enable interrupt when TCNT1 == OCR1A (p.136)
   TIMSK1 |= _BV(OCIE1A);
   
-  lastSample = pgm_read_byte(&sounddata_data[sounddata_length-1]);
+  lastSample = pgm_read_byte(&melody_data[melody_data_length-1]);
   sample = 0;
   sei();
 }
