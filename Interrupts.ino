@@ -45,6 +45,7 @@ ISR(TIMER1_COMPA_vect) {
       decrementPlayback();
   }
   else {
+    // Set speaker pin (OCR2A) to do PWM on the current sample
     OCR2A = pgm_read_byte(&melody_data[sample]);
   }
 
@@ -70,52 +71,89 @@ void setDingDongPlaying() {
 /*
  * Initializes Timer2 to do PWM on speaker pin and
  * Timer1 to CTC mode to sample at 8kHz.
+ * Datasheet: http://www.atmel.com/images/atmel-8271-8-bit-avr-microcontroller-atmega48a-48pa-88a-88pa-168a-168pa-328-328p_datasheet_complete.pdf
  */
 void initializeTimers() {
   pinMode(speakerPin, OUTPUT);
   
-  // Set up Timer 2 to do pulse width modulation on the speaker
-  // pin.
+  // Set up Timer 2 to do PWM on the speaker pin to actually play the notes in the melody
+
+  // Setting up to use internal clock
+  // KEY: _BV(bit) = (1 << bit)
+  // AS2 bit: when 0, Timer2 uses internal I/O clock (Datasheet pgs 158-159)
+  // EXCLK bit: when 1, external clock is selected and can be input on TOSC1 pin (Datasheet pg 158)-- we want to clear this (0)
+  ASSR &= ~(_BV(EXCLK) | _BV(AS2)); // This clears both AS2 and EXCLK
+  // ASSR &= ~(_BV(AS2)); // This clears AS2 (may not be necessary to clear EXCLK)
   
-  // Use internal clock (datasheet p.160)
-  ASSR &= ~(_BV(EXCLK) | _BV(AS2));
-  
-  // Set fast PWM mode  (p.157)
-  TCCR2A |= _BV(WGM21) | _BV(WGM20);
+  // Fast PWM when TCCR2A's WGM21 and WGM20 bits are 1
+  // and when TCCR2B's WGM22 bit is 0
+  // -- Datasheet pg 155
+  TCCR2A |= _BV(WGM21) 
+  TCCR2A |= _BV(WGM20);
   TCCR2B &= ~_BV(WGM22);
   
-  // Do non-inverting PWM on pin OC2A (p.155)
-  // On the Arduino this is pin 11.
-  TCCR2A = (TCCR2A | _BV(COM2A1)) & ~_BV(COM2A0);
-  TCCR2A &= ~(_BV(COM2B1) | _BV(COM2B0));
+  // For non-inverting PWM on OC2A (the UNO's digital pin 11), 
+  // set TCCR2A's COM2A1 bit (1) and clear TCCR2A's COM2A0 bit (0).
+  // Clear OC2B (digital pin 3) of PWM for normal port operation by
+  // clearing TCCR2A's COM2B0 and COM2B1 bits (0).
+  // -- Datasheet pg 153-154 for setting non-inverting mode on OC2A and clearing OC2B
+  TCCR2A |= _BV(COM2A1);
+  TCCR2A &= ~_BV(COM2A0);
+  TCCR2A &= ~(_BV(COM2B1) | _BV(COM2B0)); // May not be necessary
   
-  // No prescaler (p.158)
-  TCCR2B = (TCCR2B & ~(_BV(CS12) | _BV(CS11))) | _BV(CS10);
+  // Set TCCR2B to have no prescaler by clearing its CS22 and CS21 bits (0)
+  // and setting its CS20 bit (1)
+  // --Datasheet pg 156
+  TCCR2B &= ~(_BV(CS22) | _BV(CS21));
+  TCCR2B |= _BV(CS20);
+  // TCCR2B = (TCCR2B & ~(_BV(CS12) | _BV(CS11))) | _BV(CS10); // Why the fuck do they use CS1x? TCCR2B uses CS2x... I think this only worked because the bit indices are the same
   
-  // Set initial pulse width to the first sample.
-  OCR2A = pgm_read_byte(&melody_data[0]);
   
-  // Set up Timer 1 to send a sample every interrupt.
+  // Set speaker pin (OCR2A) to do PWM according to the first sample
+//  OCR2A = pgm_read_byte(&melody_data[0]); // Pretty sure we don't need this and straight up shouldn't do it
+  // May have to set it to some initial value, though (silence)
+  
+  // Set up Timer 1 to interrupt at a constant rate, the lowest common denominator
+  // of the sample rate and a realistic tick rate.
+  // Since OCR1A is 16-bit, we need to stop itnerrupts (Datasheet pg 113)
   cli();
   
-  // Set CTC mode (Clear Timer on Compare Match) (p.133)
-  // Have to set OCR1A *after*, otherwise it gets reset to 0!
-  TCCR1B = (TCCR1B & ~_BV(WGM13)) | _BV(WGM12);
-  TCCR1A = TCCR1A & ~(_BV(WGM11) | _BV(WGM10));
-  
-  // No prescaler (p.134)
-  TCCR1B = (TCCR1B & ~(_BV(CS12) | _BV(CS11))) | _BV(CS10);
+  // TCCR1A's WGM11 and WM10 bits and TCCR1B's WGM13 and WGM12 bits
+  // control the counting sequence of the countrer, the source for max counter value, 
+  // and what type of waveform generation to use. 
+  // We want Clear Timer on Compare Match (CTC) mode on OCR1A.
+  // TCCR1A: clear WGM10 and WGM11
+  // TCCR1B: clear WGM13, set WGM12
+  // --Datasheet pg 132
+  //TCCR1B = (TCCR1B & ~_BV(WGM13)) | _BV(WGM12);
+  //TCCR1A = TCCR1A & ~(_BV(WGM11) | _BV(WGM10));
+  TCCR1A &= ~(_BV(WGM10) | _BV(WGM11));
+  TCCR1B &= ~(_BV(WGM13);
+  TCCR1B |= _BV(WGM12);
+
+  // No prescaler for TCCR1B
+  // Clear CS11 and CS12, set CS10
+  // --Datasheet pg 134
+  TCCR1B |= _BV(CS10);
+  TCCR1B &= ~(_BV(CS11) | _BV(CS12));
   
   // Set the compare register (OCR1A).
-  // OCR1A is a 16-bit register, so we have to do this with
-  // interrupts disabled to be safe.
+  // Set OCR1A (compare register) to the lowest common denominator rate,
+  // based on SAMPLE_RATE (8000)
+  // I still don't entirely get this
   OCR1A = F_CPU / SAMPLE_RATE;    // 16e6 / 8000 = 2000
   
-  // Enable interrupt when TCNT1 == OCR1A (p.136)
+  // When the timer counter (TCNT1) == OCR1A, the OCF1A flag in TIFR1A is set (1).
+  // In TIMSK1, set OCIE1A so that the corresponding interrupt (TIMER1 COMPA) is executed
+  // when the OCF1A flag is set.
+  // --Datasheet pg 136
+  // --Datasheet pg 57 for corresponding interrupt
   TIMSK1 |= _BV(OCIE1A);
-  
-  lastSample = pgm_read_byte(&melody_data[melody_data_length-1]);
+
+  // Set initial sample to 0
   sample = 0;
+
+  // Re-enable interrupts
   sei();
 }
 
