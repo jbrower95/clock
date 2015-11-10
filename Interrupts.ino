@@ -74,6 +74,7 @@ void setDingDongPlaying() {
  * Datasheet: http://www.atmel.com/images/atmel-8271-8-bit-avr-microcontroller-atmega48a-48pa-88a-88pa-168a-168pa-328-328p_datasheet_complete.pdf
  */
 void initializeTimers() {
+  
   pinMode(speakerPin, OUTPUT);
 
   // KEY: _BV(bit) = (1 << bit)

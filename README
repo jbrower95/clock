@@ -1,0 +1,35 @@
+  ____ _            _    
+ / ___| | ___   ___| | __
+| |   | |/ _ \ / __| |/ /
+| |___| | (_) | (__|   < 
+ \____|_|\___/ \___|_|\_\
+
+  by Arielle and Justin
+==========================
+
+Implementation:
+	- Initial time:
+		Upon running the clock, you must send it a string over serial of the following format:
+
+			"HH:MM:SS"
+		
+		When it receives this time, it'll start displaying the time / being a clock. It'll check
+		invalid input and let you know if you messed up.
+
+	- Once the clock is set, we use 2 timers (timer2 and timer1) to sample the next audio byte and then
+	perform PWM output. Our audio is all unsigned 8 bit PCM audio. For Ding Dong, we sampled the audio
+	down to 4000KHz and then exported at 8000KHz, and we were able to fit the whole structure in progmem.
+
+		For more information on our timer usage, see Interrupts.ino:74 (initializeTimers())
+
+	- We use an external display connected using a software serial port to visualize the time.
+
+Bugs:
+	- Our clock is measurably off (~1m) at the end of a 12 hour run period. This is due to the drift
+	of the Arduino crystal. We can compensate for this by not incrementing our clock after
+	exactly 8000 clock ticks @ 8MHz, but this is largely unstable. To make a truly reliable clock,
+	you'd get a much higher frequency oscillator with guaranteed accuracy (or an embedded clock IC).
+
+References:
+	"8-bit, 8000 Hz audio playback on a PC speaker" - http://playground.arduino.cc/Code/PCMAudio
+	bin2c - https://github.com/gwilymk/bin2c
