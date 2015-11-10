@@ -84,7 +84,6 @@ void initializeTimers() {
   // Setting up to use internal clock (need to clear (0) the AS2 and EXCLK bits on ASSR)
   // --Datasheet pg 158-159
   ASSR &= ~(_BV(EXCLK) | _BV(AS2)); // This clears both AS2 and EXCLK
-  // ASSR &= ~(_BV(AS2)); // This clears AS2 (may not be necessary to clear EXCLK)
   
   // Fast PWM when TCCR2A's WGM21 and WGM20 bits are 1
   // and when TCCR2B's WGM22 bit is 0
@@ -100,7 +99,7 @@ void initializeTimers() {
   // -- Datasheet pg 153-154 for setting non-inverting mode on OC2A and clearing OC2B
   TCCR2A |= _BV(COM2A1);
   TCCR2A &= ~_BV(COM2A0);
-  TCCR2A &= ~(_BV(COM2B1) | _BV(COM2B0)); // May not be necessary
+  TCCR2A &= ~(_BV(COM2B1) | _BV(COM2B0));
   
   // Set TCCR2B to have no prescaler by clearing its CS22 and CS21 bits (0)
   // and setting its CS20 bit (1)

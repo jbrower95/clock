@@ -16,20 +16,33 @@ Implementation:
 		When it receives this time, it'll start displaying the time / being a clock. It'll check
 		invalid input and let you know if you messed up.
 
-	- Once the clock is set, we use 2 timers (timer2 and timer1) to sample the next audio byte and then
-	perform PWM output. Our audio is all unsigned 8 bit PCM audio. For Ding Dong, we sampled the audio
+	- Once the clock is set, we use 2 timers (timer2 and timer1) to sample the next audio byte (timer 1) and then
+	perform PWM output (timer 2). Our audio is all unsigned 8 bit PCM audio. For Ding Dong, we sampled the audio
 	down to 4000KHz and then exported at 8000KHz, and we were able to fit the whole structure in progmem.
 
 		For more information on our timer usage, see Interrupts.ino:74 (initializeTimers())
+			- The comments in this function are very thorough, but basically:
+				- Timer 2 is set up with fast, non-inverting PWM, and no prescaler
+					- OCR2A is set when sampling, not in the timer setup
+				- Timer 1 is set up with CTC mode, no prescaler, and a frequency of 2000, and is set up so that the COMPA interrupt is executed when TCNT1 == OCR1A
+				- This set up means that Timer 1 controls the interrupt that counts up to a second and samples a melody when necessary, while Timer 2 handles
+				  playing the notes of the given melody
 
 	- We use an external display connected using a software serial port to visualize the time.
+	
+	- Program Storage Space Used: 73%
+	- Dynamic Memory Used: 70%
+
 
 Bugs:
 	- Our clock is measurably off (~1m) at the end of a 12 hour run period. This is due to the drift
 	of the Arduino crystal. We can compensate for this by not incrementing our clock after
 	exactly 8000 clock ticks @ 8MHz, but this is largely unstable. To make a truly reliable clock,
 	you'd get a much higher frequency oscillator with guaranteed accuracy (or an embedded clock IC).
+		- We have adjusted the number of ticks our clock will count to before actually ticking a second, but don't have 24 hours left to test it out.
+		  After 1 hour counting up to 7680, it is off by 0 seconds.
 
 References:
 	"8-bit, 8000 Hz audio playback on a PC speaker" - http://playground.arduino.cc/Code/PCMAudio
+		- We used this to understand the best way to set up our timers, as we wanted to use two to handle the different tasks necessary
 	bin2c - https://github.com/gwilymk/bin2c
