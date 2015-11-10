@@ -72,10 +72,10 @@ void setDingDongPlaying() {
  * Timer1 to CTC mode to sample at 8kHz.
  */
 void initializeTimers() {
+  
   pinMode(speakerPin, OUTPUT);
   
-  // Set up Timer 2 to do pulse width modulation on the speaker
-  // pin.
+  // Set up Timer 2 to do pulse width modulation on the speaker pin.
   
   // Use internal clock (datasheet p.160)
   ASSR &= ~(_BV(EXCLK) | _BV(AS2));
