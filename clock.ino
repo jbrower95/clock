@@ -9,14 +9,11 @@
 #include "Interrupts.h"
 #include <string.h>
 
-#define SAMPLE_RATE 8000
-
-
-// The actual clock, initialized to 0:00:00
+// The actual clock
 // These are military values for the time stored.
-volatile int hour = 23;
-volatile int minute = 59;
-volatile int second = 55;
+volatile byte hour;
+volatile byte minute;
+volatile byte second;
 
 SoftwareSerial screen(2,4); // pin 4 = TX to screen
 
@@ -51,9 +48,11 @@ void setup() {
           break;
         } else {
           clearScreen();
-          screen.write("Whoops! Incorrect format.");
+          for (int i = 0; i < dateCounter; i++) { dateInput[i] = 0; }
+          dateCounter = 0;
+          transmissionComplete = false;
+          screen.write("Whoops! Expected HH:MM:SS");
         }
-        transmissionComplete = false;
       }
     }
 }
@@ -72,7 +71,9 @@ void loop() {
 void serialEvent() {
   while (Serial.available() && dateCounter < 1024) {
     char inChar = (char)Serial.read();
-    dateInput[dateCounter++] += inChar;
+    if (!transmissionComplete) {
+      dateInput[dateCounter++] += inChar;
+    }
     if (inChar == '\n') {
       transmissionComplete = true;
     }
@@ -97,16 +98,16 @@ bool parseDate(char *input, size_t length) {
   // null terminate the input string, just in case.
   input[length] = 0;
 
-  volatile int *parts[] = {&hour, &minute, &second};
+  volatile byte *parts[] = {&hour, &minute, &second};
 
-  int accumulator = 0;
+  byte accumulator = 0;
   int part = 0;
   int assigned = 0;
   
   for (int i = 0; i < length; i++) { 
     if (input[i] == __SEPARATOR || input[i] == '\n') {
       // disperse accumulator
-      volatile int *current = parts[part++];
+      volatile byte *current = parts[part++];
 
       if (part > 3 || (part == 0 && accumulator > 23) || (part != 0 && accumulator > 59)) {
         return false;

@@ -9,7 +9,7 @@
 
 Implementation:
 	- Initial time:
-		Upon running the clock, you must send it a string over serial of the following format:
+		Upon running the clock, you must send it a string over serial (MUST END WITH NEWLINE) of the following format:
 
 			"HH:MM:SS"
 		
@@ -29,9 +29,13 @@ Implementation:
 				  playing the notes of the given melody
 
 	- We use an external display connected using a software serial port to visualize the time.
-	
+
 	- Program Storage Space Used: 73%
 	- Dynamic Memory Used: 70%
+
+	Optimizations:
+		- In tick(), all the values are calculated with modulo arithmetic instead of branching
+		- Screen only redraws upon clock tick, not with every clock cycle
 
 
 Bugs:
