@@ -20,7 +20,7 @@ volatile uint16_t sample;
 byte lastSample;
 
 int counter = 0;
-int maxCount = 7650;
+int maxCount = 7680;
 
 
 /* Counts to a second; if a second has been reached, call tick() to increment the clock.
@@ -75,20 +75,20 @@ void setDingDongPlaying() {
  */
 void initializeTimers() {
   pinMode(speakerPin, OUTPUT);
+
+  // KEY: _BV(bit) = (1 << bit)
   
   // Set up Timer 2 to do PWM on the speaker pin to actually play the notes in the melody
 
-  // Setting up to use internal clock
-  // KEY: _BV(bit) = (1 << bit)
-  // AS2 bit: when 0, Timer2 uses internal I/O clock (Datasheet pgs 158-159)
-  // EXCLK bit: when 1, external clock is selected and can be input on TOSC1 pin (Datasheet pg 158)-- we want to clear this (0)
+  // Setting up to use internal clock (need to clear (0) the AS2 and EXCLK bits on ASSR)
+  // --Datasheet pg 158-159
   ASSR &= ~(_BV(EXCLK) | _BV(AS2)); // This clears both AS2 and EXCLK
   // ASSR &= ~(_BV(AS2)); // This clears AS2 (may not be necessary to clear EXCLK)
   
   // Fast PWM when TCCR2A's WGM21 and WGM20 bits are 1
   // and when TCCR2B's WGM22 bit is 0
   // -- Datasheet pg 155
-  TCCR2A |= _BV(WGM21) 
+  TCCR2A |= _BV(WGM21) ;
   TCCR2A |= _BV(WGM20);
   TCCR2B &= ~_BV(WGM22);
   
@@ -106,12 +106,6 @@ void initializeTimers() {
   // --Datasheet pg 156
   TCCR2B &= ~(_BV(CS22) | _BV(CS21));
   TCCR2B |= _BV(CS20);
-  // TCCR2B = (TCCR2B & ~(_BV(CS12) | _BV(CS11))) | _BV(CS10); // Why the fuck do they use CS1x? TCCR2B uses CS2x... I think this only worked because the bit indices are the same
-  
-  
-  // Set speaker pin (OCR2A) to do PWM according to the first sample
-//  OCR2A = pgm_read_byte(&melody_data[0]); // Pretty sure we don't need this and straight up shouldn't do it
-  // May have to set it to some initial value, though (silence)
   
   // Set up Timer 1 to interrupt at a constant rate, the lowest common denominator
   // of the sample rate and a realistic tick rate.
@@ -119,16 +113,14 @@ void initializeTimers() {
   cli();
   
   // TCCR1A's WGM11 and WM10 bits and TCCR1B's WGM13 and WGM12 bits
-  // control the counting sequence of the countrer, the source for max counter value, 
+  // control the counting sequence of the counter, the source for max counter value, 
   // and what type of waveform generation to use. 
   // We want Clear Timer on Compare Match (CTC) mode on OCR1A.
   // TCCR1A: clear WGM10 and WGM11
   // TCCR1B: clear WGM13, set WGM12
   // --Datasheet pg 132
-  //TCCR1B = (TCCR1B & ~_BV(WGM13)) | _BV(WGM12);
-  //TCCR1A = TCCR1A & ~(_BV(WGM11) | _BV(WGM10));
   TCCR1A &= ~(_BV(WGM10) | _BV(WGM11));
-  TCCR1B &= ~(_BV(WGM13);
+  TCCR1B &= ~(_BV(WGM13));
   TCCR1B |= _BV(WGM12);
 
   // No prescaler for TCCR1B
@@ -137,10 +129,8 @@ void initializeTimers() {
   TCCR1B |= _BV(CS10);
   TCCR1B &= ~(_BV(CS11) | _BV(CS12));
   
-  // Set the compare register (OCR1A).
-  // Set OCR1A (compare register) to the lowest common denominator rate,
+  // Set OCR1A (compare register) to the lowest common denominator frequency,
   // based on SAMPLE_RATE (8000)
-  // I still don't entirely get this
   OCR1A = F_CPU / SAMPLE_RATE;    // 16e6 / 8000 = 2000
   
   // When the timer counter (TCNT1) == OCR1A, the OCF1A flag in TIFR1A is set (1).
